@@ -7,3 +7,5 @@
 .drawer.open{transform:translateX(0)}.drawer h2{font-size:24px}.drawer-form{border-radius:16px;background:white;border:1px solid var(--line);padding:16px}.drawer-form .btn{width:100%;margin-top:8px}.drawer-item{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}.drawer-item b{font-size:13px}
 @media(max-width:900px){.sitebar{gap:10px;flex-wrap:wrap}.sitebrand{width:100%}.sitebar .nav{margin:0;flex:1}.sitebar #logout{margin-left:auto}}
 @media(max-width:600px){.drawer{padding:21px 16px}.sitebar .nav button{padding:9px}.sitebrand strong{font-size:23px}}
+
+.project-summary{margin:20px 0 26px;padding:17px;border:1px solid var(--line);border-radius:13px;background:#fff}.project-summary p{margin:10px 0 15px;line-height:1.55}.drawer-heading{margin-top:25px;margin-bottom:10px}.drawer-heading h3{margin:0}.drawer-item{align-items:start}.drawer-item .muted{line-height:1.5;margin-top:5px}
