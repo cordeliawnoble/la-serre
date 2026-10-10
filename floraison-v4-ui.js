@@ -31,7 +31,7 @@ function serreCalendar(){
   const cells=dates.map(d=>'<div class="v4-calendar-day '+(d.slice(0,7)!==st.month?'outside':'')+' '+(d===todayIso?'today':'')+'" data-v4-date="'+d+'"><span>'+dayDate(d).getDate()+'</span></div>').join('');
   const bands=entries.map(e=>{const p=project(e.m.project_id),color=serreEscape(p?.color_hex||'#809e87');
    const starts=e.p.start_date>=weekStart,ends=e.p.end_date<=weekEnd;
-   return '<div class="v4-calendar-band '+(starts?'begins':'continues')+' '+(ends?'ends':'ongoing')+'" style="--band:'+color+';left:calc('+e.from+' * 100% / 7 + 4px);width:calc('+(e.to-e.from+1)+' * 100% / 7 - 8px);top:'+(38+e.lane*30)+'px" draggable="true" data-v4-period="'+e.p.id+'" data-v4-start="'+e.p.start_date+'" data-action="v4select" data-id="'+e.m.id+'" title="'+serreEscape(e.m.title)+' · '+e.p.start_date+' → '+e.p.end_date+'"><span class="v4-band-icon">'+serreEscape(p?.icon_name||'✦')+'</span><span class="v4-band-title">'+serreEscape(p?.name||'')+' · '+serreEscape(e.m.title)+'</span>'+(e.m.progress_status==='completed'?'<span class="v4-band-status">✓</span>':'')+'</div>';
+   return '<div class="v4-calendar-band '+(starts?'begins':'continues')+' '+(ends?'ends':'ongoing')+'" style="--band:'+color+';left:calc('+e.from+' * 100% / 7 + 4px);width:calc('+(e.to-e.from+1)+' * 100% / 7 - 8px);top:'+(38+e.lane*30)+'px" data-v4-period="'+e.p.id+'" data-v4-start="'+e.p.start_date+'" data-action="v4select" data-id="'+e.m.id+'" title="'+serreEscape(e.m.title)+' · '+e.p.start_date+' → '+e.p.end_date+'"><span class="v4-band-icon">'+serreEscape(p?.icon_name||'✦')+'</span><span class="v4-band-title">'+serreEscape(p?.name||'')+' · '+serreEscape(e.m.title)+'</span>'+(e.m.progress_status==='completed'?'<span class="v4-band-status">✓</span>':'')+'<span class="v4-band-grip" data-v4-grip="'+e.p.id+'" title="Allonger ou raccourcir">↔</span></div>';
   }).join('');
   rows+='<section class="v4-calendar-week" style="min-height:'+(Math.max(1,lanes.length)*30+49)+'px"><div class="v4-calendar-cells">'+cells+'</div><div class="v4-calendar-bands">'+bands+'</div></section>';
  }
@@ -57,3 +57,58 @@ document.addEventListener('input',e=>{
  const next=document.querySelector('[data-v4-search]');next.focus();next.setSelectionRange(pos,pos);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&bloomState.details&&st.tab==='bloom'){bloomState.details=false;bloomState.selected=null;render()}});
+
+/* Manipulation au pointeur, indépendante du drag HTML natif.
+   On décale par nombre de jours, sans modifier le jalon ni son échéance ferme. */
+let serrePointer=null;
+let serreSuppressClickUntil=0;
+function serrePointerDay(clientX,clientY){
+ const hit=document.elementFromPoint(clientX,clientY);
+ const day=hit?.closest('[data-v4-date]');
+ if(day)return day.dataset.v4Date;
+ const week=hit?.closest('.v4-calendar-week');
+ if(!week)return null;
+ const rect=week.getBoundingClientRect();
+ const column=Math.max(0,Math.min(6,Math.floor((clientX-rect.left)/rect.width*7)));
+ const first=week.querySelector('[data-v4-date]')?.dataset.v4Date;
+ return first?dayShift(first,column):null;
+}
+document.addEventListener('pointerdown',e=>{
+ if(st.tab!=='bloom'||!serreV4.ready||e.button!==0)return;
+ const band=e.target.closest('.v4-calendar-band');if(!band)return;
+ const p=st.periods.find(x=>x.id===band.dataset.v4Period);if(!p)return;
+ const week=band.closest('.v4-calendar-week'),rect=week?.getBoundingClientRect();
+ if(!rect)return;
+ const first=week.querySelector('[data-v4-date]')?.dataset.v4Date;
+ const column=Math.max(0,Math.min(6,Math.floor((e.clientX-rect.left)/rect.width*7)));
+ serrePointer={id:p.id,mode:e.target.closest('[data-v4-grip]')?'resize':'move',startX:e.clientX,startY:e.clientY,origin:dayShift(first,column),start:p.start_date,end:p.end_date,moved:false,pointerId:e.pointerId};
+ band.classList.add('v4-band-dragging');
+},true);
+document.addEventListener('pointermove',e=>{
+ const d=serrePointer;if(!d||e.pointerId!==d.pointerId)return;
+ if(Math.abs(e.clientX-d.startX)+Math.abs(e.clientY-d.startY)>7)d.moved=true;
+ if(!d.moved)return;
+ const target=serrePointerDay(e.clientX,e.clientY);
+ document.querySelectorAll('.v4-calendar-day.v4-drop-preview').forEach(x=>x.classList.remove('v4-drop-preview'));
+ if(target)document.querySelector('[data-v4-date="'+target+'"]')?.classList.add('v4-drop-preview');
+},true);
+document.addEventListener('pointerup',async e=>{
+ const d=serrePointer;if(!d||e.pointerId!==d.pointerId)return;
+ serrePointer=null;
+ document.querySelectorAll('.v4-band-dragging,.v4-drop-preview').forEach(x=>x.classList.remove('v4-band-dragging','v4-drop-preview'));
+ if(!d.moved)return;
+ serreSuppressClickUntil=Date.now()+400;
+ const target=serrePointerDay(e.clientX,e.clientY);
+ if(!target)return;
+ const delta=dayDiff(d.origin,target);
+ if(!delta)return;
+ const patch=d.mode==='resize'?{end_date:dayShift(d.end,delta)}:{start_date:dayShift(d.start,delta),end_date:dayShift(d.end,delta)};
+ if(patch.end_date<(patch.start_date||d.start)){alert('La fin doit rester après le début du jalon.');return}
+ const r=await db.from('serre_milestone_periods').update(patch).eq('id',d.id);
+ if(r.error){alert('Modification impossible : '+r.error.message);return}
+ await reload();
+},true);
+document.addEventListener('pointercancel',()=>{serrePointer=null;document.querySelectorAll('.v4-band-dragging,.v4-drop-preview').forEach(x=>x.classList.remove('v4-band-dragging','v4-drop-preview'))},true);
+document.addEventListener('click',e=>{
+ if(Date.now()<serreSuppressClickUntil&&e.target.closest('.v4-calendar-band')){e.stopImmediatePropagation();e.preventDefault()}
+},true);
