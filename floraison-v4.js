@@ -18,7 +18,7 @@ getAll=async function(){
 exportJson=function(){serreOldExport();};
 function serreVisible(m){if(!bloomState.filter)return true;let id=m.project_id;const seen=new Set();while(id&&!seen.has(id)){if(id===bloomState.filter)return true;seen.add(id);id=project(id)?.parent_id}return false}
 function serrePeriods(m){return st.periods.filter(p=>p.milestone_id===m.id)}
-function serreMonthDays(){const first=st.month+'-01';return Array.from({length:dayDate(dayShift(st.month+'-01',32)).getDate()?new Date(+st.month.slice(0,4),+st.month.slice(5),0).getDate():31},(_,i)=>dayShift(first,i))}
+function serreMonthDays(){const first=st.month+'-01';return Array.from({length:new Date(+st.month.slice(0,4),+st.month.slice(5),0).getDate()},(_,i)=>dayShift(first,i))}
 function serreProjectRows(){return st.projects.filter(p=>p.status==='active').filter(p=>st.milestones.some(m=>m.project_id===p.id&&serreVisible(m)&&serrePeriods(m).some(x=>x.start_date<=st.month+'-31'&&x.end_date>=st.month+'-01')))}
 function serreMonth(){
  const days=serreMonthDays(),last=days.at(-1),todayIso=isoDay(new Date());
