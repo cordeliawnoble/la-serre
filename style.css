@@ -34,3 +34,18 @@
 .calendar-strip.continuity-middle::before,.calendar-strip.continuity-end::before{top:0}
 .continuity-note{font-size:.8rem;color:#68796c;white-space:nowrap}
 @media(max-width:700px){.continuity-note{display:inline;font-size:.78rem}}
+
+/* Cartes du cockpit et familles de projets */
+.home-milestone-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.home-milestone-grid .item{margin:0;min-width:0;min-height:148px;padding:19px 20px;border-top:4px solid var(--color,#809e87);border-radius:16px;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:12px}
+.home-milestone-grid .item>div{min-width:0}
+.home-milestone-grid .item>.btn{align-self:flex-end}
+.project-group{min-width:0}
+.project-children{margin:12px 0 0 18px;padding-left:14px;border-left:2px solid #d5e2d5;display:grid;gap:12px}
+.project-children[hidden]{display:none}
+.project-children .project-card-visual{height:48px}
+.project-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.archive-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.archive-card{border-top:4px solid var(--color,#809e87)}
+.archive-card .between{margin-top:18px}
+@media(max-width:800px){.home-milestone-grid,.archive-grid{grid-template-columns:1fr}}
