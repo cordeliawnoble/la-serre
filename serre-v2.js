@@ -31,6 +31,7 @@ function shell(content){root.innerHTML='<div class="wrap"><div class="sitebar"><
 function closeProjectDrawer(){drawerState.projectId=null;const d=document.getElementById('projectDrawer');const b=document.getElementById('drawerBackdrop');if(d){d.classList.remove('open');d.setAttribute('aria-hidden','true')}if(b)b.hidden=true}
 
 const drawerState={projectId:null,tab:'fiche',expanded:false};
+const bloomState={selected:null,filter:null,sidebar:true,details:true,collapsed:new Set()};
 function openProjectDrawer(id,tab){
  const p=project(id);if(!p)return;drawerState.projectId=id;if(tab)drawerState.tab=tab;
  const d=document.getElementById('projectDrawer');if(!d)return;
@@ -77,29 +78,68 @@ function projects(){const roots=st.projects.filter(p=>p.status==='active'&&(!p.p
 function archives(){const list=st.projects.filter(p=>p.status!=='active');return '<h2>Archives et projets en pause</h2><p class="muted">Tous les jalons et les horizons sont conservés. Tu peux réactiver un projet.</p><div class="archive-grid">'+(list.length?list.map(p=>'<div class="card archive-card" style="--color:'+escapeHtml(p.color_hex)+'">'+tag(p)+'<p class="muted small">'+(p.status==='archived'?'Archivé':'En pause')+'</p><div class="between"><button class="btn small" data-action="openproject" data-id="'+p.id+'">Consulter</button><button class="btn primary small" data-action="reactivate" data-id="'+p.id+'">Réactiver</button></div></div>').join(''):'<div class="empty">Aucun projet archivé ou en pause.</div>')+'</div>'}
 function weekStarts(){const d=new Date(st.month+'-01T12:00:00'),end=new Date(d.getFullYear(),d.getMonth()+1,0,12);d.setDate(d.getDate()-(d.getDay()+6)%7);const v=[];while(d<=end){v.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));d.setDate(d.getDate()+7)}return v}
 function weekItems(week){return st.weeks.filter(w=>w.week_start===week).map(w=>({link:w,m:st.milestones.find(m=>m.id===w.milestone_id)})).filter(x=>x.m&&x.m.target_month===monthDate()).sort((a,b)=>(a.link.sort_order??0)-(b.link.sort_order??0)||a.link.created_at.localeCompare(b.link.created_at))}
+function bloomSidebar(){
+ const roots=st.projects.filter(p=>p.status==='active'&&(!p.parent_id||project(p.parent_id)?.status!=='active'));
+ const node=(p,depth=0)=>{const kids=childrenOf(p.id).filter(x=>x.status==='active');return '<div class="bloom-tree-row" style="--color:'+escapeHtml(p.color_hex||'#809e87')+';padding-left:'+(depth*15)+'px"><button class="bloom-filter '+(bloomState.filter===p.id?'chosen':'')+'" data-action="bloomfilter" data-id="'+p.id+'"><span class="bloom-dot"></span>'+escapeHtml(p.name)+'</button>'+(kids.length?'<button class="bloom-fold" data-action="bloomfold" data-id="'+p.id+'">'+(bloomState.collapsed.has(p.id)?'▸':'▾')+'</button>':'')+'</div>'+(kids&&!bloomState.collapsed.has(p.id)?kids.map(k=>node(k,depth+1)).join(''):'')};
+ return '<aside class="bloom-sidebar"><div class="between"><h3>Projets</h3><button class="btn small" data-action="bloomsidebar">‹</button></div><button class="bloom-filter all '+(!bloomState.filter?'chosen':'')+'" data-action="bloomfilter" data-id="">Tous les projets</button>'+roots.map(p=>node(p)).join('')+'</aside>';
+}
+function bloomDetails(){
+ const m=st.milestones.find(x=>x.id===bloomState.selected);
+ if(!m)return '<aside class="bloom-details"><div class="between"><h3>Jalon sélectionné</h3><button class="btn small" data-action="bloomdetails">×</button></div><p class="muted">Clique sur un jalon pour consulter sa fiche, sans quitter le calendrier.</p></aside>';
+ const p=project(m.project_id),links=st.weeks.filter(x=>x.milestone_id===m.id).sort((a,b)=>a.week_start.localeCompare(b.week_start));
+ return '<aside class="bloom-details"><div class="between"><h3>Jalon sélectionné</h3><button class="btn small" data-action="bloomdetails">×</button></div><div style="margin:18px 0">'+tag(p)+'</div><h3>'+escapeHtml(m.title)+'</h3><p class="muted small">Mois cible : '+escapeHtml(m.target_month.slice(0,7))+'</p><p class="muted small">Semaines planifiées : '+(links.length?links.map(x=>new Date(x.week_start+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})).join(', '):'aucune')+'</p>'+(m.hard_deadline?'<p class="muted small">Échéance ferme : '+escapeHtml(m.hard_deadline)+'</p>':'')+'<p><b>'+escapeHtml(progress[m.progress_status]||'Prévu')+'</b></p><p class="muted">'+escapeHtml(m.details||'Aucune note pour ce jalon.')+'</p><div class="bloom-detail-actions"><button class="btn" data-action="editmilestone" data-id="'+m.id+'">Modifier la fiche</button><button class="btn primary" data-action="bloomcomplete" data-id="'+m.id+'" '+(m.progress_status==='completed'?'disabled':'')+'>✓ Marquer terminé</button><button class="btn" data-action="bloomperiod" data-id="'+m.id+'">Modifier les semaines</button></div><p class="muted small">Déplacer un jalon ne change jamais son échéance ferme.</p></aside>';
+}
 function bloom(){
  const weeks=weekStarts(),first=new Date(st.month+'-01T12:00:00'),month=first.getMonth();
  const days=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
  const header='<div class="calendar-weekdays">'+days.map(d=>'<span>'+d+'</span>').join('')+'</div>';
- const rows=weeks.map(w=>{
+ const visible=m=>{if(!bloomState.filter)return true;const p=project(m.project_id);return p?.id===bloomState.filter||p?.parent_id===bloomState.filter};
+ const rows=weeks.map((w,wi)=>{
   const start=new Date(w+'T12:00:00');
   const dates=Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d});
   const cells='<div class="calendar-days">'+dates.map(d=>'<div class="calendar-day '+(d.getMonth()!==month?'outside':'')+'"><span>'+d.getDate()+'</span></div>').join('')+'</div>';
-  const entries=weekItems(w);
-  const strips=entries.map((x,i)=>{
+  const entries=weekItems(w).filter(x=>visible(x.m));
+  const strips=entries.map(x=>{
    const color=escapeHtml(project(x.m.project_id)?.color_hex||'#65886c');
-   const label=escapeHtml(x.m.title);
-   const wi=weeks.indexOf(w);
-   const before=wi>0&&st.weeks.some(link=>link.week_start===weeks[wi-1]&&link.milestone_id===x.m.id);
-   const after=wi<weeks.length-1&&st.weeks.some(link=>link.week_start===weeks[wi+1]&&link.milestone_id===x.m.id);
-   const continuity=before&&after?'middle':before?'end':after?'start':'single';
-   const middle=before&&after;
-   const content=middle?'<span class="continuity-note" title="'+label+'">En cours</span>':'<b title="'+label+'">'+label+'</b>';
-   return '<div class="calendar-strip continuity-'+continuity+'" style="--color:'+color+'" title="'+label+'"><div class="calendar-strip-label">'+tag(project(x.m.project_id))+content+'</div><div class="calendar-strip-actions"><button class="btn small" data-action="weekup" data-week="'+w+'" data-id="'+x.link.id+'" aria-label="Monter" '+(i===0?'disabled':'')+'>↑</button><button class="btn small" data-action="weekdown" data-week="'+w+'" data-id="'+x.link.id+'" aria-label="Descendre" '+(i===entries.length-1?'disabled':'')+'>↓</button><button class="btn small" data-action="unplaceweek" data-week="'+w+'" data-id="'+x.m.id+'" aria-label="Retirer ce jalon de cette semaine">×</button></div></div>'
+   const label=escapeHtml(x.m.title),mid=x.m.id;
+   const before=wi>0&&st.weeks.some(link=>link.week_start===weeks[wi-1]&&link.milestone_id===mid);
+   const after=wi<weeks.length-1&&st.weeks.some(link=>link.week_start===weeks[wi+1]&&link.milestone_id===mid);
+   return '<div class="bloom-event '+(bloomState.selected===mid?'selected':'')+'" style="--color:'+color+'" draggable="true" data-dragmilestone="'+mid+'" data-dragweek="'+w+'" data-action="bloomselect" data-id="'+mid+'" tabindex="0" role="button" aria-label="'+label+'"><div class="bloom-event-main">'+tag(project(x.m.project_id))+'<b>'+label+'</b></div><div class="bloom-event-end"><span class="muted small">'+escapeHtml(progress[x.m.progress_status]||'')+'</span><span class="bloom-resize" draggable="true" data-resize="'+mid+'" data-dragweek="'+w+'" title="Étendre à la semaine suivante" aria-label="Étendre la période">↔</span></div></div>';
   }).join('');
-  return '<section class="calendar-week" aria-label="Semaine du '+dates[0].toLocaleDateString('fr-FR')+'">'+cells+'<div class="calendar-week-events">'+(strips||'<p class="calendar-empty">Aucun jalon prévu</p>')+'<button class="calendar-add" data-action="placeweek" data-week="'+w+'">+ Placer un jalon</button></div></section>'
+  return '<section class="calendar-week bloom-dropzone" data-dropweek="'+w+'" aria-label="Semaine du '+dates[0].toLocaleDateString('fr-FR')+'">'+cells+'<div class="calendar-week-events">'+(strips||'<p class="calendar-empty">Aucun jalon prévu</p>')+'<button class="calendar-add" data-action="placeweek" data-week="'+w+'">+ Placer un jalon</button></div></section>';
  }).join('');
- return '<div class="top"><h2>Floraison</h2>'+monthControls()+'</div><p class="muted">Ton mois d’un seul regard. Chaque bande représente un jalon pour la semaine, sans imposer de travail quotidien.</p><div class="floraison-calendar">'+header+rows+'</div><p class="muted small">Les traits colorés indiquent les jalons qui se poursuivent d’une semaine à l’autre. Les flèches règlent leur ordre.</p>';
+ return '<div class="bloom-layout '+(!bloomState.sidebar?'no-sidebar ':'')+(!bloomState.details?'no-details':'')+'">'+(bloomState.sidebar?bloomSidebar():'')+'<main class="bloom-main"><div class="top"><div><h2>Floraison</h2><p class="muted">Ton mois d’un seul regard. Glisse les jalons entre les semaines.</p></div>'+monthControls()+'</div><div class="bloom-toolbar">'+(!bloomState.sidebar?'<button class="btn small" data-action="bloomsidebar">☰ Projets</button>':'')+(!bloomState.details?'<button class="btn small" data-action="bloomdetails">☷ Fiche du jalon</button>':'')+'<span class="muted small">Une couleur par projet · Aucun travail quotidien imposé</span></div><div class="floraison-calendar">'+header+rows+'</div><p class="muted small">Déplace une carte vers une autre semaine. La poignée ↔ permet d’étendre sa durée d’une semaine. Pour raccourcir une période, ouvre « Modifier les semaines ».</p></main>'+(bloomState.details?bloomDetails():'')+'</div>';
+}
+async function bloomMove(id,from,to,extend=false){
+ if(from===to)return;
+ const source=st.weeks.find(x=>x.milestone_id===id&&x.week_start===from);
+ if(!source)throw Error('Placement introuvable.');
+ const existing=st.weeks.find(x=>x.milestone_id===id&&x.week_start===to);
+ if(extend){
+  if(existing)return;
+  const r=await db.from('serre_milestone_weeks').insert({milestone_id:id,week_start:to,sort_order:weekItems(to).length});
+  if(r.error)throw r.error;
+ }else if(existing){
+  const r=await db.from('serre_milestone_weeks').delete().eq('id',source.id);
+  if(r.error)throw r.error;
+ }else{
+  const r=await db.from('serre_milestone_weeks').update({week_start:to,sort_order:weekItems(to).length}).eq('id',source.id);
+  if(r.error)throw r.error;
+ }
+ await reload();
+}
+function bloomPeriod(id){
+ const m=st.milestones.find(x=>x.id===id);if(!m)return;
+ const weeks=weekStarts(),chosen=new Set(st.weeks.filter(x=>x.milestone_id===id).map(x=>x.week_start));
+ const body='<p class="muted">Choisis les semaines concernées. Le jalon reste unique, et sa véritable échéance ne change pas.</p>'+weeks.map(w=>'<label class="week-choice"><input type="checkbox" name="weeks" value="'+w+'" '+(chosen.has(w)?'checked':'')+'>Semaine du '+new Date(w+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+'</label>').join('');
+ openEditor('Période du jalon',body,async f=>{
+  const wanted=new Set(f.getAll('weeks'));
+  const removed=st.weeks.filter(x=>x.milestone_id===id&&weeks.includes(x.week_start)&&!wanted.has(x.week_start));
+  const added=weeks.filter(w=>wanted.has(w)&&!chosen.has(w));
+  for(const x of removed){const r=await db.from('serre_milestone_weeks').delete().eq('id',x.id);if(r.error)throw r.error}
+  if(added.length){const r=await db.from('serre_milestone_weeks').insert(added.map(w=>({milestone_id:id,week_start:w,sort_order:weekItems(w).length})));if(r.error)throw r.error}
+  await reload();
+ });
 }
 function admin(){return '<h2>Administration</h2><p class="muted">La gestion des horizons, jalons et post-it se fait désormais dans les projets.</p><div class="cards"><div class="card"><h3>Sauvegarde</h3><p class="muted">Exporter tes données La Serre au format JSON.</p><button class="btn" data-action="export">Exporter les données</button></div><div class="card"><h3>Personnalisation</h3><p class="muted">Couleurs, icônes et informations des projets se modifient directement dans leur fiche.</p><button class="btn" data-tab="projects">Voir mes projets</button></div></div>'}
 function render(){if(!st.user)return authView();shell(({home,projects,bloom,archives,admin})[st.tab]())}
@@ -176,6 +216,13 @@ async function moveWeek(id,week,direction){
  await reload();
 }
 function exportJson(){const o={exported_at:new Date().toISOString(),projects:st.projects,milestones:st.milestones,weeks:st.weeks,focus:st.focus,horizons:st.horizons,notes:st.notes};const url=URL.createObjectURL(new Blob([JSON.stringify(o,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='la-serre-'+st.month+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-document.addEventListener('click',async e=>{const tab=e.target.closest('[data-tab]');if(tab){closeProjectDrawer();st.tab=tab.dataset.tab;render();return}const b=e.target.closest('[data-action]');if(!b)return;try{switch(b.dataset.action){case'monthprev':case'monthnext':{const d=new Date(st.month+'-01T12:00:00');d.setMonth(d.getMonth()+(b.dataset.action==='monthprev'?-1:1));st.month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render();break}case'newproject':projectEditor();break;case'newchild':closeProjectDrawer();projectEditor(undefined,b.dataset.id);break;case'togglechildren':{const el=document.querySelector('[data-children="'+b.dataset.id+'"]');if(el){el.hidden=!el.hidden;b.setAttribute('aria-expanded',String(!el.hidden));b.textContent=el.hidden?'Déplier ▾':'Replier ▴'}break}case'reactivate':await persist('serre_projects',{status:'active'},b.dataset.id);break;case'openproject':drawerState.tab='fiche';openProjectDrawer(b.dataset.id);break;case'drawertab':openProjectDrawer(drawerState.projectId,b.dataset.drawertab);break;case'expanddrawer':drawerState.expanded=!drawerState.expanded;openProjectDrawer(drawerState.projectId);break;case'closedrawer':closeProjectDrawer();break;case'editproject':closeProjectDrawer();projectEditor(b.dataset.id);break;case'newmilestone':milestoneEditor();break;case'editmilestone':closeProjectDrawer();milestoneEditor(b.dataset.id);break;case'focus':focusEditor();break;case'newhorizon':horizonEditor();break;case'newprojecthorizon':closeProjectDrawer();horizonEditor(undefined,b.dataset.id);break;case'edithorizon':closeProjectDrawer();horizonEditor(b.dataset.id);break;case'newnote':noteEditor();break;case'newprojectnote':closeProjectDrawer();noteEditor(undefined,b.dataset.id);break;case'editnote':noteEditor(b.dataset.id);break;case'placeweek':placeWeek(b.dataset.week);break;case'weekup':await moveWeek(b.dataset.id,b.dataset.week,-1);break;case'weekdown':await moveWeek(b.dataset.id,b.dataset.week,1);break;case'unplaceweek':{const w=st.weeks.find(x=>x.milestone_id===b.dataset.id&&x.week_start===b.dataset.week);if(w)await erase('serre_milestone_weeks',w.id);break}case'export':exportJson();break}}catch(err){alert(err.message)}});
+document.addEventListener('click',async e=>{const tab=e.target.closest('[data-tab]');if(tab){closeProjectDrawer();st.tab=tab.dataset.tab;render();return}const b=e.target.closest('[data-action]');if(!b)return;try{switch(b.dataset.action){case'monthprev':case'monthnext':{const d=new Date(st.month+'-01T12:00:00');d.setMonth(d.getMonth()+(b.dataset.action==='monthprev'?-1:1));st.month=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render();break}case'newproject':projectEditor();break;case'newchild':closeProjectDrawer();projectEditor(undefined,b.dataset.id);break;case'togglechildren':{const el=document.querySelector('[data-children="'+b.dataset.id+'"]');if(el){el.hidden=!el.hidden;b.setAttribute('aria-expanded',String(!el.hidden));b.textContent=el.hidden?'Déplier ▾':'Replier ▴'}break}case'reactivate':await persist('serre_projects',{status:'active'},b.dataset.id);break;case'openproject':drawerState.tab='fiche';openProjectDrawer(b.dataset.id);break;case'drawertab':openProjectDrawer(drawerState.projectId,b.dataset.drawertab);break;case'expanddrawer':drawerState.expanded=!drawerState.expanded;openProjectDrawer(drawerState.projectId);break;case'closedrawer':closeProjectDrawer();break;case'editproject':closeProjectDrawer();projectEditor(b.dataset.id);break;case'newmilestone':milestoneEditor();break;case'editmilestone':closeProjectDrawer();milestoneEditor(b.dataset.id);break;case'focus':focusEditor();break;case'newhorizon':horizonEditor();break;case'newprojecthorizon':closeProjectDrawer();horizonEditor(undefined,b.dataset.id);break;case'edithorizon':closeProjectDrawer();horizonEditor(b.dataset.id);break;case'newnote':noteEditor();break;case'newprojectnote':closeProjectDrawer();noteEditor(undefined,b.dataset.id);break;case'editnote':noteEditor(b.dataset.id);break;case'bloomfilter':bloomState.filter=b.dataset.id||null;render();break;case'bloomfold':if(bloomState.collapsed.has(b.dataset.id))bloomState.collapsed.delete(b.dataset.id);else bloomState.collapsed.add(b.dataset.id);render();break;case'bloomsidebar':bloomState.sidebar=!bloomState.sidebar;render();break;case'bloomdetails':bloomState.details=!bloomState.details;render();break;case'bloomselect':bloomState.selected=b.dataset.id;bloomState.details=true;render();break;case'bloomcomplete':{const m=st.milestones.find(x=>x.id===b.dataset.id);if(m)await persist('serre_milestones',{progress_status:'completed',completed_at:m.completed_at||new Date().toISOString()},m.id);break}case'bloomperiod':bloomPeriod(b.dataset.id);break;case'placeweek':placeWeek(b.dataset.week);break;case'weekup':await moveWeek(b.dataset.id,b.dataset.week,-1);break;case'weekdown':await moveWeek(b.dataset.id,b.dataset.week,1);break;case'unplaceweek':{const w=st.weeks.find(x=>x.milestone_id===b.dataset.id&&x.week_start===b.dataset.week);if(w)await erase('serre_milestone_weeks',w.id);break}case'export':exportJson();break}}catch(err){alert(err.message)}});
+let bloomDrag=null;
+document.addEventListener('dragstart',e=>{if(st.tab!=='bloom')return;const resize=e.target.closest('[data-resize]'),card=e.target.closest('[data-dragmilestone]');const target=resize||card;if(!target)return;bloomDrag={id:resize?.dataset.resize||card.dataset.dragmilestone,from:target.dataset.dragweek,extend:!!resize};e.dataTransfer.effectAllowed=bloomDrag.extend?'copy':'move';e.dataTransfer.setData('text/plain',bloomDrag.id)});
+document.addEventListener('dragover',e=>{const zone=e.target.closest('[data-dropweek]');if(!zone||!bloomDrag)return;e.preventDefault();e.dataTransfer.dropEffect=bloomDrag.extend?'copy':'move';zone.classList.add('drag-over')});
+document.addEventListener('dragleave',e=>{const zone=e.target.closest('[data-dropweek]');if(zone&&!zone.contains(e.relatedTarget))zone.classList.remove('drag-over')});
+document.addEventListener('drop',async e=>{const zone=e.target.closest('[data-dropweek]');if(!zone||!bloomDrag)return;e.preventDefault();const task=bloomDrag;bloomDrag=null;document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));try{await bloomMove(task.id,task.from,zone.dataset.dropweek,task.extend)}catch(err){alert('Déplacement impossible : '+err.message)}});
+document.addEventListener('dragend',()=>{bloomDrag=null;document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'))});
+document.addEventListener('keydown',e=>{if(st.tab==='bloom'&&(e.key==='Enter'||e.key===' ')&&e.target.matches('[data-dragmilestone]')){e.preventDefault();bloomState.selected=e.target.dataset.dragmilestone;bloomState.details=true;render()}});
 async function init(){if(!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase){configurationMissing();return}db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:'la-serre-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});db.auth.onAuthStateChange((event,session)=>{setTimeout(async()=>{const old=st.user?.id;st.user=session?.user||null;if(st.user){if(st.user.id!==old)await reload()}else authView()},0)});const r=await db.auth.getSession();if(r.error){root.textContent=r.error.message;return}st.user=r.data.session?.user||null;if(st.user)await reload();else authView()}
 init();
