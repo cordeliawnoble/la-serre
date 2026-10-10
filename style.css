@@ -121,3 +121,43 @@ body:has(.bloom-layout) .wrap{max-width:1760px;width:calc(100% - 44px)}
 .v4-horizons{display:grid;gap:12px}
 .v4-horizon-milestone{display:block;width:100%;text-align:left;padding:9px;border:1px solid #e4e9e1;background:#f8faf7;border-radius:8px;margin:6px 0;cursor:pointer}
 @media(max-width:750px){.v4-month-heading,.v4-project-row{grid-template-columns:115px minmax(600px,1fr)}.v4-week{grid-template-columns:repeat(7,115px)}}
+
+/* Floraison : présentation inspirée du calendrier et de l'explorateur */
+.v4-shell{display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px;align-items:start;position:relative}
+.v4-shell:not(:has(.v4-explorer)){grid-template-columns:minmax(0,1fr)}
+.v4-explorer{background:#fff;border:1px solid #e2e8df;border-radius:15px;padding:14px;min-height:540px;position:sticky;top:12px}
+.v4-explorer h3{margin:0;font-size:16px}
+.v4-project-search{width:100%;margin:14px 0 10px;padding:9px;border:1px solid #dce7dc;border-radius:8px;font-size:12px}
+.v4-tree-all,.v4-tree-archive{width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:10px 8px;cursor:pointer;color:#405448;font-size:12px}
+.v4-tree-all.active,.v4-tree-name.active{background:#eaf3e8}
+.v4-tree-group{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin:12px 0 7px}
+.v4-tree-group span,.v4-tree-archive span,.v4-tree-count{font-size:10px;background:#edf2ed;border-radius:7px;padding:2px 5px}
+.v4-tree-line{display:flex;align-items:center;min-width:0;margin:3px 0}
+.v4-tree-toggle{border:0;background:transparent;cursor:pointer;width:18px;flex-shrink:0;color:#62796a}
+.v4-tree-spacer{width:18px;flex-shrink:0}
+.v4-tree-name{display:flex;align-items:center;gap:6px;flex:1;min-width:0;text-align:left;background:transparent;border:0;border-radius:7px;padding:7px 5px;cursor:pointer;font-size:12px}
+.v4-tree-name>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:normal}
+.v4-tree-dot{width:9px;height:9px;background:var(--tree-color);border-radius:50%;flex-shrink:0}
+.v4-tree-archive{margin-top:18px;border-top:1px solid #edf0ec}
+.v4-content{min-width:0}
+.v4-calendar{border:1px solid #e0e9df;border-radius:13px;overflow:hidden;background:#fff}
+.v4-calendar-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:#edf4ec}
+.v4-calendar-head span{text-align:center;padding:12px 0;font-weight:700;font-size:12px;color:#365b46}
+.v4-calendar-week{position:relative;border-top:1px solid #e6ebe4}
+.v4-calendar-cells{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:absolute;inset:0}
+.v4-calendar-day{border-right:1px solid #e7ede8;padding:9px;font-size:12px;color:#405c49;min-width:0}
+.v4-calendar-day.outside{background:#f7f8f7;color:#a2aaa3}
+.v4-calendar-day.today>span{display:inline-grid;place-items:center;background:#467c5a;color:white;border-radius:50%;width:23px;height:23px}
+.v4-calendar-bands{position:relative;padding-top:38px;pointer-events:none}
+.v4-calendar-band{position:absolute;min-height:25px;display:flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--band) 19%,white);color:#334338;border-left:4px solid var(--band);border-radius:7px;padding:3px 7px;cursor:grab;pointer-events:auto;white-space:nowrap;overflow:hidden;font-size:11px}
+.v4-calendar-band.continues{border-left:0;border-radius:0 7px 7px 0}
+.v4-calendar-band.ongoing{border-radius:7px 0 0 7px}
+.v4-band-title{overflow:hidden;text-overflow:ellipsis}
+.v4-band-icon{flex-shrink:0}
+.v4-band-status{margin-left:auto}
+.v4-drawer-shade{position:fixed;inset:0;background:#16241d55;z-index:1100}
+.v4-jalon-drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,94vw);background:#fff;box-shadow:-12px 0 40px #142b2140;z-index:1101;overflow-y:auto;padding:28px 20px}
+.v4-jalon-drawer .bloom-details{border:0;box-shadow:none;padding:10px 0;width:auto;position:static}
+.v4-drawer-close{position:absolute;right:16px;top:14px;border:0;background:#edf3ec;border-radius:8px;font-size:23px;cursor:pointer;width:34px;height:34px}
+@media(max-width:950px){.v4-shell{grid-template-columns:175px minmax(0,1fr);gap:10px}.v4-explorer{padding:10px}.v4-calendar-band{font-size:10px;padding:3px}}
+@media(max-width:680px){.v4-shell{grid-template-columns:1fr}.v4-explorer{position:static;min-height:0}.v4-calendar{overflow-x:auto}.v4-calendar-head,.v4-calendar-week{min-width:680px}}
