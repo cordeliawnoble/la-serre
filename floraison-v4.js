@@ -32,7 +32,7 @@ function serreMonth(){
    return '<div class="v4-track" style="--color:'+serreEscape(p.color_hex||'#809e87')+'"><div class="v4-track-grid">'+days.map(d=>'<span data-v4-date="'+d+'"></span>').join('')+'</div><div class="v4-ribbon '+(bloomState.selected===m.id?'v4-selected':'')+'" style="left:calc('+from+' * 100% / '+days.length+');width:calc('+(to-from+1)+' * 100% / '+days.length+')" draggable="true" data-v4-period="'+x.id+'" data-v4-start="'+x.start_date+'" data-action="v4select" data-id="'+m.id+'" title="'+serreEscape(m.title)+' : '+x.start_date+' au '+x.end_date+'"><span class="v4-ribbon-text">'+serreEscape(m.title)+'</span><button class="v4-resize" data-action="v4editperiod" data-period="'+x.id+'" title="Modifier les dates" draggable="false">↔</button></div></div>';
   }).join('')+'</div></div>';
  }).join('');
- return '<div class="v4-month"><div class="v4-month-heading"><b>Projets</b>'+header+'</div>'+(rows||'<div class="notice">Aucune période datée pour ce mois. Choisis un jalon dans un projet, puis « Ajouter une période ».</div>')+'</div>';
+ return '<div class="v4-month"><div class="v4-month-heading"><b>Projets</b>'+header.replace('class="v4-dates"','class="v4-dates" style="grid-template-columns:repeat('+days.length+',minmax(0,1fr))"')+'</div>'+(rows||'<div class="notice">Aucune période datée pour ce mois. Choisis un jalon dans un projet, puis « Ajouter une période ».</div>')+'</div>';
 }
 function serreWeek(){
  const monthStart=st.month+'-01',base=dayShift(monthStart,-(dayDate(monthStart).getDay()+6)%7+serreV4.weekOffset*7);
@@ -52,7 +52,7 @@ function serreDetails(){
 }
 bloom=function(){
  if(!serreV4.ready)return serreOldBloom();
- return '<div class="bloom-layout '+(!bloomState.sidebar?'no-sidebar ':'')+(!bloomState.details?'no-details':'')+'">'+(bloomState.sidebar?bloomSidebar():'')+'<main class="bloom-main"><div class="top"><div><h2>Floraison</h2><p class="muted">Dates réelles et temps réservé, sans transformer tes prévisions en obligations.</p></div>'+monthControls()+'</div><div class="bloom-toolbar">'+(!bloomState.sidebar?'<button class="btn small" data-action="bloomsidebar">☰ Projets</button>':'')+'<button class="btn small '+(serreV4.mode==='month'?'primary':'')+'" data-action="v4mode" data-mode="month">Vue Mois</button><button class="btn small '+(serreV4.mode==='week'?'primary':'')+'" data-action="v4mode" data-mode="week">Zoom Semaine</button><button class="btn small '+(serreV4.mode==='horizon'?'primary':'')+'" data-action="v4mode" data-mode="horizon">Horizons</button>'+(!bloomState.details?'<button class="btn small" data-action="bloomdetails">☷ Fiche</button>':'')+'</div>'+(serreV4.mode==='week'?serreWeek():serreV4.mode==='horizon'?serreHorizons():serreMonth())+'</main>'+(bloomState.details?serreDetails():'')+'</div>';
+ return '<div class="bloom-layout '+(!bloomState.sidebar?'no-sidebar ':'')+(!bloomState.details?'no-details':'')+'">'+(bloomState.sidebar?bloomSidebar():'')+'<main class="bloom-main"><div class="top"><div><h2>Floraison</h2><p class="muted">Dates réelles et temps réservé, sans transformer tes prévisions en obligations.</p></div>'+monthControls()+'</div><div class="bloom-toolbar">'+(!bloomState.sidebar?'<button class="btn small" data-action="bloomsidebar">☰ Projets</button>':'')+'<button class="btn small '+(serreV4.mode==='month'?'primary':'')+'" data-action="v4mode" data-mode="month">Vue Mois</button><button class="btn small '+(serreV4.mode==='week'?'primary':'')+'" data-action="v4mode" data-mode="week">Zoom Semaine</button><button class="btn small '+(serreV4.mode==='horizon'?'primary':'')+'" data-action="v4mode" data-mode="horizon">Horizons</button>'+(!bloomState.details?'<button class="btn small" data-action="bloomdetails">☷ Fiche</button>':'')+'</div>'+((st.weeks.length&&!st.periods.length?'<div class="notice">Tes placements hebdomadaires existent toujours. <button class="btn small" data-action="v4importweeks">Convertir en périodes datées</button></div>':'')+(serreV4.mode==='week'?serreWeek():serreV4.mode==='horizon'?serreHorizons():serreMonth())+'</main>'+(bloomState.details?serreDetails():'')+'</div>';
 };
 function serreHorizons(){
  const hs=st.horizons.filter(h=>!bloomState.filter||h.project_id===bloomState.filter||project(h.project_id)?.parent_id===bloomState.filter);
@@ -82,6 +82,7 @@ document.addEventListener('click',async e=>{
  if(!act.startsWith('v4'))return;
  e.stopImmediatePropagation();
  try{
+  if(act==='v4importweeks')await serreImportWeeks();
   if(act==='v4mode'){serreV4.mode=b.dataset.mode;render()}
   if(act==='v4select'){bloomState.selected=b.dataset.id;bloomState.details=true;render()}
   if(act==='v4prevweek'){serreV4.weekOffset--;render()}
@@ -118,3 +119,23 @@ document.addEventListener('drop',async e=>{
  }catch(err){alert('Déplacement impossible : '+err.message)}
 },true);
 document.addEventListener('dragend',()=>{serreDrag=null},true);
+
+async function serreImportWeeks(){
+ if(!confirm('Convertir les placements hebdomadaires en périodes datées ? Les anciennes semaines seront conservées.'))return;
+ const groups=new Map();
+ for(const w of st.weeks){const a=groups.get(w.milestone_id)||[];a.push(w.week_start);groups.set(w.milestone_id,a)}
+ const additions=[];
+ for(const [id,starts] of groups){
+  if(st.periods.some(p=>p.milestone_id===id))continue;
+  starts.sort();let a=starts[0],b=a;
+  for(let i=1;i<starts.length;i++){
+   if(dayDiff(b,starts[i])===7)b=starts[i];
+   else{additions.push({milestone_id:id,start_date:a,end_date:dayShift(b,6)});a=b=starts[i]}
+  }
+  additions.push({milestone_id:id,start_date:a,end_date:dayShift(b,6)});
+ }
+ if(!additions.length){alert('Aucune période à importer.');return}
+ const r=await db.from('serre_milestone_periods').insert(additions);
+ if(r.error)throw r.error;
+ await reload();
+}
