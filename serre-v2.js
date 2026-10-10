@@ -109,7 +109,7 @@ function area(label,name,value=''){return '<label>'+label+'<textarea name="'+nam
 function openEditor(title,fields,submit){document.getElementById('editorTitle').textContent=title;const form=document.getElementById('editorForm');form.innerHTML=fields+'<div class="between" style="margin-top:15px"><button type="button" class="btn" id="cancelEditor">Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>';document.getElementById('cancelEditor').onclick=()=>document.getElementById('editorDialog').close();document.getElementById('closeDialog').onclick=()=>document.getElementById('editorDialog').close();form.onsubmit=async e=>{e.preventDefault();let button=form.querySelector('[type=submit]');button.disabled=true;try{await submit(new FormData(form));document.getElementById('editorDialog').close()}catch(e){alert('Impossible de sauvegarder : '+e.message)}finally{button.disabled=false}};document.getElementById('editorDialog').showModal()}
 function projectEditor(id,parentId=null){
  const p=project(id),kids=childrenOf(id);
- const possible=st.projects.filter(x=>x.id!==id&&!x.parent_id&&!childrenOf(x.id).length&&x.status!=='archived');
+ const possible=st.projects.filter(x=>x.id!==id&&!x.parent_id&&x.status!=='archived');
  const parents=[['','Aucun (projet indépendant)'],...possible.map(x=>[x.id,x.name])];
  if(parentId&&!parents.some(([v])=>v===parentId))parents.push([parentId,project(parentId)?.name||'Projet parent']);
  openEditor(p?'Modifier le projet':'Créer un projet',
@@ -122,7 +122,7 @@ function projectEditor(id,parentId=null){
  async f=>{
   const parent_id=f.get('parent_id')||null;
   if(parent_id===id)throw Error('Un projet ne peut pas être son propre parent.');
-  if(parent_id&&childrenOf(parent_id).length)throw Error('Deux niveaux maximum.');
+  if(parent_id&&project(parent_id)?.parent_id)throw Error('Deux niveaux maximum.');
   if(parent_id&&kids.length)throw Error('Ce projet possède déjà des enfants.');
   await persist('serre_projects',{name:f.get('name').trim(),color_hex:f.get('color_hex'),icon_name:f.get('icon_name')||'🌱',parent_id,status:f.get('status'),description:f.get('description')},id);
  });
