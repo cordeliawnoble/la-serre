@@ -256,3 +256,7 @@ body{
 .sitebar .sitebrand strong{color:#294a39}
 @media(max-width:720px){.sitebar{padding:13px;border-radius:14px}}
 @media(prefers-reduced-motion:reduce){.sitebar .nav button{transition:none}}
+
+/* Typographie : Georgia pour les titres, Poppins pour l'interface */
+body{font-family:'Poppins',system-ui,sans-serif}
+button,input,select,textarea{font-family:'Poppins',system-ui,sans-serif}
