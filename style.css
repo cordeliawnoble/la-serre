@@ -89,3 +89,35 @@ body:has(.bloom-layout) .wrap{max-width:1760px;width:calc(100% - 44px)}
 .bloom-details>h3{line-height:1.3}
 @media(max-width:1190px){.bloom-layout{grid-template-columns:175px minmax(0,1fr)}.bloom-layout.no-sidebar{grid-template-columns:minmax(0,1fr)}.bloom-layout .bloom-details{position:fixed;z-index:40;right:10px;top:12px;width:min(340px,calc(100vw - 24px));box-shadow:0 12px 40px #1c392a25;max-height:calc(100vh - 24px)}.bloom-layout.no-details{grid-template-columns:175px minmax(0,1fr)}.bloom-layout.no-sidebar.no-details{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:730px){body:has(.bloom-layout) .wrap{width:calc(100% - 20px)}.bloom-layout,.bloom-layout.no-details{grid-template-columns:minmax(0,1fr)}.bloom-sidebar{position:relative;max-height:240px}.bloom-main .calendar-weekdays{font-size:11px}.bloom-main .calendar-day{font-size:12px}.bloom-event-main .tag{max-width:35%}.bloom-event-end .small{display:none}}
+
+/* Floraison V4 : frise datée et zoom sur les demi-journées */
+.v4-month{border:1px solid #e2e9df;border-radius:15px;background:#fff;overflow-x:auto}
+.v4-month-heading,.v4-project-row{display:grid;grid-template-columns:170px minmax(600px,1fr);border-bottom:1px solid #e7ede7}
+.v4-month-heading{background:#f0f5ee;align-items:center;padding:0}
+.v4-month-heading>b{padding:13px;font-size:13px}
+.v4-dates,.v4-track-grid{display:grid;grid-template-columns:repeat(31,minmax(0,1fr));align-items:stretch}
+.v4-dates span{font-size:10px;text-align:center;border-left:1px solid #e8eee7;padding:13px 0}
+.v4-dates .v4-today{background:#dcecdf;font-weight:800}
+.v4-row-label{padding:13px 8px;display:flex;align-items:center;min-width:0}
+.v4-row-label .tag{max-width:100%;white-space:normal}
+.v4-row-tracks{padding:7px 0;display:grid;gap:5px}
+.v4-track{position:relative;height:37px}
+.v4-track-grid{position:absolute;inset:0;pointer-events:none}
+.v4-track-grid span{border-left:1px solid #f0f2ee}
+.v4-ribbon{position:absolute;top:4px;height:29px;background:var(--color);color:white;border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 6px;cursor:grab;min-width:0}
+.v4-ribbon-text{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v4-ribbon.v4-selected{outline:2px solid #314b3e;outline-offset:2px}
+.v4-resize{background:#ffffff44;color:white;border:0;border-radius:5px;cursor:pointer}
+.v4-week-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0;flex-wrap:wrap}
+.v4-week{display:grid;grid-template-columns:repeat(7,minmax(115px,1fr));gap:8px;overflow-x:auto}
+.v4-day{border:1px solid #e4e9e2;border-radius:12px;padding:9px;min-width:115px;background:#fff}
+.v4-day>strong{display:block;font-size:12px;margin-bottom:10px}
+.v4-slot{border:1px dashed #dce5db;border-radius:9px;min-height:112px;margin:6px 0;padding:7px}
+.v4-slot>small{display:block;color:#738678;margin-bottom:7px}
+.v4-block{background:color-mix(in srgb,var(--color) 16%,white);border-left:3px solid var(--color);border-radius:6px;padding:6px;font-size:11px;cursor:grab;overflow-wrap:anywhere;margin:5px 0}
+.v4-remove{float:right;border:0;background:transparent;cursor:pointer}
+.v4-add{border:0;background:transparent;color:#507b60;cursor:pointer;font-size:11px;padding:5px 0}
+.v4-period-line{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:12px;margin:7px 0}
+.v4-horizons{display:grid;gap:12px}
+.v4-horizon-milestone{display:block;width:100%;text-align:left;padding:9px;border:1px solid #e4e9e1;background:#f8faf7;border-radius:8px;margin:6px 0;cursor:pointer}
+@media(max-width:750px){.v4-month-heading,.v4-project-row{grid-template-columns:115px minmax(600px,1fr)}.v4-week{grid-template-columns:repeat(7,115px)}}
