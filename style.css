@@ -161,3 +161,9 @@ body:has(.bloom-layout) .wrap{max-width:1760px;width:calc(100% - 44px)}
 .v4-drawer-close{position:absolute;right:16px;top:14px;border:0;background:#edf3ec;border-radius:8px;font-size:23px;cursor:pointer;width:34px;height:34px}
 @media(max-width:950px){.v4-shell{grid-template-columns:175px minmax(0,1fr);gap:10px}.v4-explorer{padding:10px}.v4-calendar-band{font-size:10px;padding:3px}}
 @media(max-width:680px){.v4-shell{grid-template-columns:1fr}.v4-explorer{position:static;min-height:0}.v4-calendar{overflow-x:auto}.v4-calendar-head,.v4-calendar-week{min-width:680px}}
+
+.v4-calendar-band{touch-action:none;user-select:none;overflow:visible;padding-right:27px;cursor:grab}
+.v4-calendar-band:active,.v4-calendar-band.v4-band-dragging{cursor:grabbing;z-index:10;filter:brightness(.96);box-shadow:0 3px 11px #0002}
+.v4-band-title{min-width:0}
+.v4-band-grip{position:absolute;right:0;top:0;bottom:0;width:26px;display:grid;place-items:center;background:color-mix(in srgb,var(--band) 30%,white);border-left:1px solid color-mix(in srgb,var(--band) 45%,white);border-radius:0 7px 7px 0;cursor:ew-resize;font-weight:700;font-size:13px;touch-action:none}
+.v4-calendar-day.v4-drop-preview{background:#d9eadb!important;box-shadow:inset 0 0 0 2px #76a784}
