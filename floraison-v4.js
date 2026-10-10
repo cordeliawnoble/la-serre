@@ -1,7 +1,7 @@
 'use strict';
 /* Floraison V4 : périodes datées et blocs matin/après-midi.
    Compatibilité : la vue historique reste active tant que les tables SQL V4 n'existent pas. */
-const serreV4={ready:false,mode:'month',selectedPeriod:null,weekOffset:0,error:null};
+const serreV4={ready:false,mode:'month',selectedPeriod:null,weekOffset:0,weekAnchor:null,error:null};
 const serreOldGetAll=getAll,serreOldBloom=bloom,serreOldExport=exportJson;
 const isoDay=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const dayDate=s=>new Date(s+'T12:00:00');
@@ -36,14 +36,14 @@ function serreMonth(){
  return '<div class="v4-month"><div class="v4-month-heading"><b>Projets</b>'+header.replace('class="v4-dates"','class="v4-dates" style="grid-template-columns:repeat('+days.length+',minmax(0,1fr))"')+'</div>'+(rows||'<div class="notice">Aucune période datée pour ce mois. Choisis un jalon dans un projet, puis « Ajouter une période ».</div>')+'</div>';
 }
 function serreWeek(){
- const monthStart=st.month+'-01',base=dayShift(monthStart,-(dayDate(monthStart).getDay()+6)%7+serreV4.weekOffset*7);
+ const anchor=serreV4.weekAnchor||isoDay(new Date()),base=dayShift(anchor,-(dayDate(anchor).getDay()+6)%7+serreV4.weekOffset*7);
  const days=Array.from({length:7},(_,i)=>dayShift(base,i));
  const milestones=st.milestones.filter(m=>serreVisible(m)&&project(m.project_id)?.status==='active');
  const cells=days.map(d=>'<div class="v4-day"><strong>'+dayDate(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})+'</strong>'+['morning','afternoon'].map(part=>{
   const blocks=st.blocks.filter(x=>x.block_date===d&&x.day_part===part).filter(x=>milestones.some(m=>m.id===x.milestone_id));
   return '<div class="v4-slot" data-v4-date="'+d+'" data-v4-part="'+part+'"><small>'+(part==='morning'?'☀ Matin':'☾ Après-midi')+'</small>'+blocks.map(x=>{const m=st.milestones.find(y=>y.id===x.milestone_id),p=project(m.project_id);return '<div class="v4-block" draggable="true" data-v4-block="'+x.id+'" data-action="v4select" data-id="'+m.id+'" style="--color:'+serreEscape(p?.color_hex||'#809e87')+'">'+serreEscape(m.title)+' <button class="v4-remove" data-action="v4removeblock" data-id="'+x.id+'" title="Retirer ce bloc">×</button></div>'}).join('')+'<button class="v4-add" data-action="v4addblock" data-date="'+d+'" data-part="'+part+'">+ Réserver</button></div>';
  }).join('')+'</div>').join('');
- return '<div class="v4-week-nav"><button class="btn small" data-action="v4prevweek">← Semaine précédente</button><b>'+dayLabel(days[0])+' au '+dayLabel(days[6])+'</b><button class="btn small" data-action="v4nextweek">Semaine suivante →</button></div><div class="v4-week">'+cells+'</div><p class="muted small">Les demi-journées sont des réservations de temps, pas des échéances. Glisse un bloc vers un autre créneau pour le déplacer.</p>';
+ return '<div class="v4-week-nav"><button class="btn small" data-action="v4prevweek">← Semaine précédente</button><b>'+dayLabel(days[0])+' au '+dayLabel(days[6])+'</b><button class="btn small" data-action="v4today">Aujourd’hui</button><button class="btn small" data-action="v4nextweek">Semaine suivante →</button></div><div class="v4-week">'+cells+'</div><p class="muted small">Les demi-journées sont des réservations de temps, pas des échéances. Glisse un bloc vers un autre créneau pour le déplacer.</p>';
 }
 function serreDetails(){
  const m=st.milestones.find(x=>x.id===bloomState.selected);
@@ -84,7 +84,8 @@ document.addEventListener('click',async e=>{
  e.stopImmediatePropagation();
  try{
   if(act==='v4importweeks')await serreImportWeeks();
-  if(act==='v4mode'){serreV4.mode=b.dataset.mode;render()}
+  if(act==='v4mode'){serreV4.mode=b.dataset.mode;if(serreV4.mode==='week'){serreV4.weekAnchor=isoDay(new Date());serreV4.weekOffset=0}render()}
+  if(act==='v4today'){serreV4.weekAnchor=isoDay(new Date());serreV4.weekOffset=0;st.month=serreV4.weekAnchor.slice(0,7);render()}
   if(act==='v4select'){bloomState.selected=b.dataset.id;bloomState.details=true;render()}
   if(act==='v4prevweek'){serreV4.weekOffset--;render()}
   if(act==='v4nextweek'){serreV4.weekOffset++;render()}
