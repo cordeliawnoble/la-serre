@@ -1,7 +1,7 @@
 'use strict';
 /* Floraison V4 : périodes datées et blocs matin/après-midi.
    Compatibilité : la vue historique reste active tant que les tables SQL V4 n'existent pas. */
-const serreV4={ready:false,mode:'month',selectedPeriod:null,weekOffset:0};
+const serreV4={ready:false,mode:'month',selectedPeriod:null,weekOffset:0,error:null};
 const serreOldGetAll=getAll,serreOldBloom=bloom,serreOldExport=exportJson;
 const isoDay=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const dayDate=s=>new Date(s+'T12:00:00');
@@ -13,6 +13,7 @@ getAll=async function(){
  await serreOldGetAll();
  const [p,b]=await Promise.all([db.from('serre_milestone_periods').select('*'),db.from('serre_time_blocks').select('*')]);
  serreV4.ready=!p.error&&!b.error;
+ serreV4.error=p.error?.message||b.error?.message||null;
  st.periods=p.data||[];st.blocks=b.data||[];
 };
 exportJson=function(){serreOldExport();};
@@ -51,7 +52,7 @@ function serreDetails(){
  return '<aside class="bloom-details"><div class="between"><h3>Jalon</h3><button class="btn small" data-action="bloomdetails">×</button></div><p>'+tag(project(m.project_id))+'</p><h3>'+serreEscape(m.title)+'</h3><p class="muted small">Périodes de planification</p>'+periods.map(x=>'<div class="v4-period-line">'+dayLabel(x.start_date)+' → '+dayLabel(x.end_date)+' <button class="btn small" data-action="v4editperiod" data-period="'+x.id+'">Modifier</button><button class="btn small" data-action="v4removeperiod" data-period="'+x.id+'">×</button></div>').join('')+'<div class="bloom-detail-actions"><button class="btn primary" data-action="v4addperiod" data-id="'+m.id+'">+ Ajouter une période</button><button class="btn" data-action="editmilestone" data-id="'+m.id+'">Modifier le jalon</button></div>'+(m.hard_deadline?'<p class="muted small">Échéance ferme : '+serreEscape(m.hard_deadline)+'</p>':'')+'<p class="muted small">Déplacer une période ou un bloc ne modifie pas cette échéance.</p></aside>';
 }
 bloom=function(){
- if(!serreV4.ready)return serreOldBloom();
+ if(!serreV4.ready)return '<div class="notice"><b>Floraison V4 : connexion aux nouvelles tables indisponible.</b><p>'+serreEscape(serreV4.error||'Chargement en cours. Recharge la page si le problème persiste.')+'</p><p>Les anciennes données sont conservées. Vérifie la migration SQL et les autorisations Supabase.</p></div>'+serreOldBloom();
  return '<div class="bloom-layout '+(!bloomState.sidebar?'no-sidebar ':'')+(!bloomState.details?'no-details':'')+'">'+(bloomState.sidebar?bloomSidebar():'')+'<main class="bloom-main"><div class="top"><div><h2>Floraison</h2><p class="muted">Dates réelles et temps réservé, sans transformer tes prévisions en obligations.</p></div>'+monthControls()+'</div><div class="bloom-toolbar">'+(!bloomState.sidebar?'<button class="btn small" data-action="bloomsidebar">☰ Projets</button>':'')+'<button class="btn small '+(serreV4.mode==='month'?'primary':'')+'" data-action="v4mode" data-mode="month">Vue Mois</button><button class="btn small '+(serreV4.mode==='week'?'primary':'')+'" data-action="v4mode" data-mode="week">Zoom Semaine</button><button class="btn small '+(serreV4.mode==='horizon'?'primary':'')+'" data-action="v4mode" data-mode="horizon">Horizons</button>'+(!bloomState.details?'<button class="btn small" data-action="bloomdetails">☷ Fiche</button>':'')+'</div>'+((st.weeks.length&&!st.periods.length?'<div class="notice">Tes placements hebdomadaires existent toujours. <button class="btn small" data-action="v4importweeks">Convertir en périodes datées</button></div>':'')+(serreV4.mode==='week'?serreWeek():serreV4.mode==='horizon'?serreHorizons():serreMonth()))+'</main>'+(bloomState.details?serreDetails():'')+'</div>';
 };
 function serreHorizons(){
@@ -139,3 +140,6 @@ async function serreImportWeeks(){
  if(r.error)throw r.error;
  await reload();
 }
+
+// Un chargement déjà démarré avant ce module peut encore utiliser l’ancienne version.
+setTimeout(()=>{if(st.user)reload()},350);
