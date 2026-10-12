@@ -260,3 +260,24 @@ body{
 /* Typographie : Georgia pour les titres, Poppins pour l'interface */
 body{font-family:'Poppins',system-ui,sans-serif}
 button,input,select,textarea{font-family:'Poppins',system-ui,sans-serif}
+
+/* Floraison : explorateur de fichiers compact */
+.v4-folder-node{min-width:0}
+.v4-folder-summary{list-style:none;cursor:pointer;padding:6px 4px;border-radius:7px;font-size:12px;color:#395449}
+.v4-folder-summary::-webkit-details-marker{display:none}
+.v4-folder-summary::before{content:'▸';display:inline-block;width:14px;color:#7b9583}
+.v4-project-details[open]>.v4-folder-summary::before{content:'▾'}
+.v4-folder-summary:hover,.v4-file-jalon:hover{background:#edf4ec}
+.v4-folder-heading{display:inline-flex;align-items:center;gap:5px;max-width:calc(100% - 18px);vertical-align:middle}
+.v4-folder-icon{font-size:13px}
+.v4-project-details[open]>.v4-folder-summary .v4-folder-icon{filter:saturate(1.25)}
+.v4-folder-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4-folder-count{font-size:9px;color:#829388;background:#edf2ed;border-radius:6px;padding:1px 4px}
+.v4-folder-contents{margin-left:10px;padding-left:11px;border-left:1px solid #dce8de;min-width:0}
+.v4-file-jalon{display:flex;align-items:flex-start;gap:6px;width:100%;text-align:left;border:0;background:transparent;color:#5b7062;padding:4px 5px;border-radius:6px;font-family:inherit;font-size:10px;line-height:1.4;cursor:pointer}
+.v4-file-icon{flex:none;color:#91ad98;font-size:10px}
+.v4-file-label{overflow-wrap:anywhere;min-width:0}
+.v4-file-add{border:0;background:transparent;color:#799486;font-family:inherit;font-size:10px;padding:5px;cursor:pointer}
+.v4-file-add:hover{text-decoration:underline}
+.v4-folder-empty{display:block;font-size:10px;color:#9caea1;padding:5px}
+.v4-subfolders{margin-top:3px}
