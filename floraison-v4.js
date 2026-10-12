@@ -49,7 +49,7 @@ function serreDetails(){
  const m=st.milestones.find(x=>x.id===bloomState.selected);
  if(!m)return '<aside class="bloom-details"><h3>Fiche du jalon</h3><p class="muted">Sélectionne un ruban ou un bloc pour voir son jalon.</p></aside>';
  const periods=serrePeriods(m).sort((a,b)=>a.start_date.localeCompare(b.start_date));
- return '<aside class="bloom-details"><div class="between"><h3>Jalon</h3><button class="btn small" data-action="bloomdetails">×</button></div><p>'+tag(project(m.project_id))+'</p><h3>'+serreEscape(m.title)+'</h3><p class="muted small">Périodes de planification</p>'+periods.map(x=>'<div class="v4-period-line">'+dayLabel(x.start_date)+' → '+dayLabel(x.end_date)+' <button class="btn small" data-action="v4editperiod" data-period="'+x.id+'">Modifier</button><button class="btn small" data-action="v4removeperiod" data-period="'+x.id+'">×</button></div>').join('')+'<div class="bloom-detail-actions"><button class="btn primary" data-action="v4addperiod" data-id="'+m.id+'">+ Ajouter une période</button><button class="btn" data-action="editmilestone" data-id="'+m.id+'">Modifier le jalon</button></div>'+(m.hard_deadline?'<p class="muted small">Échéance ferme : '+serreEscape(m.hard_deadline)+'</p>':'')+'<p class="muted small">Déplacer une période ou un bloc ne modifie pas cette échéance.</p></aside>';
+ return '<aside class="bloom-details"><div class="between"><h3>Jalon</h3><button class="btn small" data-action="bloomdetails">×</button></div><p>'+tag(project(m.project_id))+'</p><h3>'+serreEscape(m.title)+'</h3><p class="muted small">Périodes de planification</p>'+periods.map(x=>'<div class="v4-period-line">'+dayLabel(x.start_date)+' → '+dayLabel(x.end_date)+' <button class="btn small" data-action="v4editperiod" data-period="'+x.id+'">Modifier</button><button class="btn small" data-action="v4removeperiod" data-period="'+x.id+'">×</button></div>').join('')+'<div class="bloom-detail-actions"><button class="btn primary" data-action="v4addperiod" data-id="'+m.id+'">+ Ajouter une période</button><button class="btn" data-action="editmilestone" data-id="'+m.id+'">Modifier le jalon</button><button class="btn small" data-action="v4deletemilestone" data-id="'+m.id+'" style="color:#a34747">Supprimer ce jalon</button></div>'+(m.hard_deadline?'<p class="muted small">Échéance ferme : '+serreEscape(m.hard_deadline)+'</p>':'')+'<p class="muted small">Déplacer une période ou un bloc ne modifie pas cette échéance.</p></aside>';
 }
 bloom=function(){
  if(!serreV4.ready)return '<div class="notice"><b>Floraison V4 : connexion aux nouvelles tables indisponible.</b><p>'+serreEscape(serreV4.error||'Chargement en cours. Recharge la page si le problème persiste.')+'</p><p>Les anciennes données sont conservées. Vérifie la migration SQL et les autorisations Supabase.</p></div>'+serreOldBloom();
@@ -89,6 +89,14 @@ document.addEventListener('click',async e=>{
   if(act==='v4select'){bloomState.selected=b.dataset.id;bloomState.details=true;render()}
   if(act==='v4prevweek'){serreV4.weekOffset--;render()}
   if(act==='v4nextweek'){serreV4.weekOffset++;render()}
+  if(act==='v4deletemilestone'){
+   const m=st.milestones.find(x=>x.id===b.dataset.id);
+   if(m&&confirm('Supprimer définitivement le jalon « '+m.title+' » ? Ses périodes et réservations liées pourront aussi être supprimées. Action irréversible.')){
+    const result=await db.from('serre_milestones').delete().eq('id',m.id);
+    if(result.error)throw result.error;
+    bloomState.selected=null;bloomState.details=false;await reload();
+   }
+  }
   if(act==='v4addperiod')serrePeriodEditor(b.dataset.id);
   if(act==='v4editperiod')serrePeriodEditor(null,b.dataset.period);
   if(act==='v4removeperiod'&&confirm('Retirer cette période de planification ? Le jalon restera intact.'))await erase('serre_milestone_periods',b.dataset.period);
