@@ -12,10 +12,10 @@ function serreExplorer(){
   const ms=projectMilestones(p);
   const items=ms.map(m=>{
    const planned=serrePeriods(m).length>0;
-   return '<button type="button" data-action="v4select" data-id="'+m.id+'" style="display:block;width:100%;text-align:left;padding:7px 9px;margin:3px 0;border:0;border-radius:8px;background:'+(planned?'#edf4ef':'#fcf4e5')+';cursor:pointer;color:#34463a">'+(planned?'🌿 ':'◌ ')+serreEscape(m.title)+(planned?'':' · à planifier')+'</button>';
+   return '<button type="button" class="v4-file-jalon" data-action="v4select" data-id="'+m.id+'" title="'+(planned?'Jalon planifié':'Jalon à planifier')+'"><span class="v4-file-icon">'+(planned?'✦':'◇')+'</span><span class="v4-file-label">'+serreEscape(m.title)+'</span></button>';
   }).join('');
-  const heading='<span style="display:flex;align-items:center;gap:5px"><span>'+serreEscape(p.icon_name||'🌱')+' '+serreEscape(p.name)+'</span><span class="v4-tree-count">'+ms.length+'</span></span>';
-  return '<div style="padding-left:'+(depth*12)+'px"><details class="v4-project-details" '+(query?'open':'')+'><summary style="cursor:pointer;padding:8px 4px;font-size:12px;color:#405448">'+heading+'</summary><div style="padding-left:12px">'+(ms.length?items:'<p class="muted small">Aucun jalon.</p>')+'<button type="button" class="btn small" data-action="newmilestoneproject" data-id="'+p.id+'">＋ Nouveau jalon</button></div></details>'+(kids.length?'<div style="padding-left:9px">'+kids.map(k=>node(k,depth+1)).join('')+'</div>':'')+'</div>';
+  const heading='<span class="v4-folder-heading"><span class="v4-folder-icon" aria-hidden="true">📁</span><span class="v4-folder-name">'+serreEscape(p.name)+'</span><span class="v4-folder-count">'+ms.length+'</span></span>';
+  return '<div class="v4-folder-node"><details class="v4-project-details" '+(query?'open':'')+'><summary class="v4-folder-summary">'+heading+'</summary><div class="v4-folder-contents">'+(ms.length?items:'<span class="v4-folder-empty">Aucun jalon</span>')+'<button type="button" class="v4-file-add" data-action="newmilestoneproject" data-id="'+p.id+'">＋ Nouveau jalon</button>'+(kids.length?'<div class="v4-subfolders">'+kids.map(k=>node(k,depth+1)).join('')+'</div>':'')+'</div></details></div>';
  };
  const active=st.projects.filter(p=>p.status==='active'),roots=active.filter(p=>!p.parent_id||project(p.parent_id)?.status!=='active');
  const archived=st.projects.filter(p=>p.status!=='active');
